@@ -22,13 +22,23 @@ module.exports = grammar({
   ],
 
   externals: $ => [
+    $._dummy,
+    $.comment,
     $._newline,
     $._indent,
     $._dedent,
+    $._dedent_in,
   ],
 
   rules: {
-    source_file: $ => repeat(seq($._declaration, $._newline)),
+    source_file: $ => seq(
+      $._indent,
+      // TopDeclarations
+      optional($._declarations1),
+      optional($._dedent),
+    ),
+
+    _semi: $ => choice(';', $._newline),
 
 
     // //////////////////////////////////////////////////////////////////////
@@ -44,12 +54,20 @@ module.exports = grammar({
     // Top-level Declarations
     // //////////////////////////////////////////////////////////////////////
 
-    // Declarations
-    // indented, 1 or more declarations
-    _declaration_block: $ => block($, $._declaration),
-
-    // Declarations0: use `optional($._declaration_block)` instead
-    // _declaration_block0: $ => block($, optional($._declaration)),
+    // Declarations0
+    // indented, 0 or more declarations
+    _declarations: $ => indent($, $._declarations1),
+    _declarations0: $ => choice(
+      seq($._indent, $._dedent),
+      $._declarations,
+    ),
+    _declarations1: $ => seq(
+      $._declaration,
+      optional(choice(
+        seq($._semi, $._declarations1),
+        $._newline,
+      )),
+    ),
 
     // Declaration
     _declaration: $ => choice(
@@ -85,14 +103,21 @@ module.exports = grammar({
     // Fields
     fields: $ => seq(
       'field',
-      $._signature_block,
+      optional($._arg_type_signatures_or_empty),
     ),
 
-    // ArgTypeSignatures
-    _signature_block: $ => block($, $.signature),
+    // ArgTypeSignaturesOrEmpty
+    _arg_type_signatures_or_empty: $ => indent(
+      $,
+      // ArgTypeSignatures0
+      optional($._arg_type_signatures1)),
 
+    // ArgTypeSignatures
+    _arg_type_signatures: $ => indent($, $._arg_type_signatures1),
+    // ArgTypeSignatures1
+    _arg_type_signatures1: $ => sepR($._semi, $.signature),
     // ArgTypeSigs
-    signature: $ => choice(
+    _arg_type_sigs: $ => choice(
       seq(
         optional('overlap'),
         $._modal_arg_ids,
@@ -101,9 +126,11 @@ module.exports = grammar({
       ),
       seq(
         'instance',
-        $._signature_block,
+        $._arg_type_signatures,
       ),
     ),
+
+    signature: $ => $._arg_type_sigs,
 
     // ModalArgIds
     _modal_arg_ids: $ => seq(repeat($.attribute), $._arg_ids),
@@ -122,12 +149,14 @@ module.exports = grammar({
       seq(
         optional($.attributes),
         alias($.lhs_decl, $.lhs),
+        // XXX: missing WHS
         alias(optional($.rhs_decl), $.rhs),
         optional($.where),
       ),
       seq(
         optional($.attributes),
         alias($.lhs_defn, $.lhs),
+        // XXX: missing WHS
         alias(optional($.rhs_defn), $.rhs),
         optional($.where),
       ),
@@ -162,7 +191,7 @@ module.exports = grammar({
         $.bid,
       )),
       'where',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -177,7 +206,7 @@ module.exports = grammar({
       optional($._typed_untyped_bindings),
       optional(seq(':', $.expr)),
       'where',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -202,18 +231,19 @@ module.exports = grammar({
       alias($._atom_no_curly, $.record_name),
       optional($._typed_untyped_bindings),
       optional(seq(':', $.expr)),
+      'where',
       $.record_declarations_block,
     ),
 
     // RecordDeclarations
-    record_declarations_block: $ => seq(
-      'where',
-      indent($,
-        // RecordDirectives
-        repeat(seq($._record_directive, $._newline)),
-        repeat(seq($._declaration, $._newline)),
+    record_declarations_block: $ =>
+      choice(
+        seq($._indent, $._dedent),
+        indent($,
+          // FIXME: do not want to deal with conflicts
+          sepR($._semi, choice($._record_directive, $._declaration)),
+        ),
       ),
-    ),
 
     // RecordDirective
     _record_directive: $ => choice(
@@ -221,14 +251,15 @@ module.exports = grammar({
       $.record_constructor_instance,
       $.record_induction,
       $.record_eta,
+      // XXX: missing pattern matching
     ),
-    // RecordConstructorName
+    // RecordConstructorName/RecordConstructorName
     record_constructor: $ => seq('constructor', $.id),
 
     // Declaration of record constructor name.
     record_constructor_instance: $ => seq(
       'instance',
-      block($, $.record_constructor),
+      indent($, $.record_constructor),
     ),
 
     // RecordInduction
@@ -272,7 +303,7 @@ module.exports = grammar({
 
     generalize: $ => seq(
       'variable',
-      optional($._signature_block),
+      optional($._arg_type_signatures_or_empty),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -281,7 +312,7 @@ module.exports = grammar({
 
     mutual: $ => seq(
       'mutual',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -290,7 +321,7 @@ module.exports = grammar({
 
     abstract: $ => seq(
       'abstract',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -299,7 +330,7 @@ module.exports = grammar({
 
     private: $ => seq(
       'private',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -308,7 +339,7 @@ module.exports = grammar({
 
     instance: $ => seq(
       'instance',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -317,7 +348,7 @@ module.exports = grammar({
 
     macro: $ => seq(
       'macro',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -326,7 +357,7 @@ module.exports = grammar({
 
     postulate: $ => seq(
       'postulate',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -335,18 +366,14 @@ module.exports = grammar({
 
     primitive: $ => seq(
       'primitive',
-      optional($._type_signature_block),
+      $.type_signature,
     ),
 
-    // TypeSignatures
-    _type_signature_block: $ => block($, $.type_signature),
-
-    // TypeSigs
-    type_signature: $ => seq(
-      $._field_names,
-      ':',
-      $.expr,
-    ),
+    // compat only for ArgTypeSignaturesOrEmpty
+    type_signature: $ => indent(
+      $,
+      // ArgTypeSignatures0
+      optional(sepR($._semi, $._arg_type_sigs))),
 
     // //////////////////////////////////////////////////////////////////////
     // Declaration: Open
@@ -429,7 +456,7 @@ module.exports = grammar({
       alias(choice($._qid, '_'), $.module_name),
       optional($._typed_untyped_bindings),
       'where',
-      optional($._declaration_block),
+      optional($._declarations0),
     ),
 
     // //////////////////////////////////////////////////////////////////////
@@ -580,17 +607,13 @@ module.exports = grammar({
       seq($._typed_bindings, $._ARROW, $.expr),
       seq(optional($.attributes), $._atoms, $._ARROW, $.expr),
       seq($._with_exprs, '=', $.expr),
-      prec(-1, $._with_exprs_stmt), // lowest precedence
+      prec(-1, $._with_exprs), // lowest precedence
     ),
 
     // WithExprs/Expr1
     _with_exprs: $ => seq(
       repeat(seq($._atoms, '|')),
       $._application,
-    ),
-    _with_exprs_stmt: $ => seq(
-      repeat(seq($._atoms, '|')),
-      $._application_stmt,
     ),
 
     // ExprOrAttr
@@ -605,10 +628,6 @@ module.exports = grammar({
       optional($._atoms),
       $._expr2,
     ),
-    _application_stmt: $ => seq(
-      optional($._atoms),
-      $._expr2_stmt,
-    ),
 
     // Expr
     _expr2_without_let: $ => choice(
@@ -617,17 +636,14 @@ module.exports = grammar({
       $.forall,
       $.do,
       prec(-1, $.atom),
-      seq('quoteGoal', $.id, 'in', $.expr),
+      // this is unused? can remove because 'in' interrupts 'instance'
+      // seq('quoteGoal', $.id, 'in', $.expr),
       seq('tactic', $._atoms),
       seq('tactic', $._atoms, '|', $._with_exprs),
     ),
     _expr2: $ => choice(
       $._expr2_without_let,
       $.let,
-    ),
-    _expr2_stmt: $ => choice(
-      $._expr2_without_let,
-      alias($.let_in_do, $.let),
     ),
 
     // Expr3
@@ -666,37 +682,20 @@ module.exports = grammar({
     forall: $ => seq($._FORALL, $._typed_untyped_bindings, $._ARROW, $.expr),
 
     // LetBody
-    let: $ => prec.right(seq(
+    let: $ => prec.right(1, seq(
       'let',
-      // declarations
-      optional($._indent),
-      repeat(seq($._declaration, $._newline)),
-      $._declaration,
-      // in case that there's a newline between declarations and $._let_body
-      optional($._newline),
-
-      $._let_body,
-    )),
-
-    // special `let...in` in do statements
-    let_in_do: $ => prec.right(seq(
-      'let',
-      // declarations
-      optional($._indent),
-      repeat(seq($._declaration, $._newline)),
-      $._declaration,
-      //
+      $._indent,
+      $._declarations1,
       choice(
-        seq($._newline, $._dedent),
-        // covers the newline between declarations and $._let_body
-        seq($._newline, $._let_body),
-        // covers the rest of the cases
+        $._dedent,
         $._let_body,
       ),
     )),
 
     _let_body: $ => seq(
-      'in',
+      // dedent can still be triggered via layout
+      optional($._dedent),
+      alias($._dedent_in, 'in'),
       $.expr,
     ),
 
@@ -729,7 +728,7 @@ module.exports = grammar({
         // LamClauses
         brace($._lambda_clauses),
         // LamWhereClauses
-        seq('where', $._lambda_clauses),
+        seq('where', indent($, $._lambda_clauses)),
         // AbsurdLamBindings
         $._lambda_bindings,
       ),
@@ -737,7 +736,7 @@ module.exports = grammar({
 
     // bunch of `$._lambda_clause_maybe_absurd` sep by ';'
     _lambda_clauses: $ => prec.left(seq(
-      repeat(seq($._lambda_clause_maybe_absurd, ';')),
+      repeat(seq($._lambda_clause_maybe_absurd, $._semi)),
       $._lambda_clause_maybe_absurd,
     )),
 
@@ -761,14 +760,19 @@ module.exports = grammar({
       $.expr,
     ),
 
-    // DoStmts
     do: $ => seq('do',
-      block($, $._do_stmt),
+      indent($, $._do_stmts),
     ),
+
+    // DoStmts
+    _do_stmts: $ => seq(
+      $._do_stmt,
+      optional(
+        choice($._newline, seq($._semi, $._do_stmts)))),
 
     // DoStmt
     _do_stmt: $ => seq(
-      $.stmt,
+      $.stmt,  // should be expr???
       optional($.do_where),
     ),
 
@@ -840,7 +844,7 @@ module.exports = grammar({
       brace($.attributes, $._binding_ids_and_absurds, ':', $.expr),
       brace_double($.attributes, $._binding_ids_and_absurds, ':', $.expr),
       paren($.open),
-      paren('let', $._declaration_block),
+      paren('let', $._declarations),
     ),
 
     // TypedUntypedBindings1
@@ -885,7 +889,7 @@ module.exports = grammar({
 
     comment: _ => token(choice(
       prec(100, seq('--', /.*/)),
-      seq('{--}'),
+      '{--}',
       seq(
         '{-',
         /[^#]/,
@@ -893,7 +897,7 @@ module.exports = grammar({
           /[^-]/, // anything but -
           /-[^}]/, // - not followed by }
         )),
-        /-}/,
+        /-}\n*/,  // eat newlines to prevent spurious `_newline`s affecting external parser
       ),
     )),
 

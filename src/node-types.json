@@ -365,7 +365,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "do_where",
@@ -423,10 +423,6 @@
         },
         {
           "type": "forall",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -545,15 +541,7 @@
           "named": true
         },
         {
-          "type": "expr",
-          "named": true
-        },
-        {
           "type": "forall",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -852,15 +840,7 @@
           "named": true
         },
         {
-          "type": "expr",
-          "named": true
-        },
-        {
           "type": "forall",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -880,7 +860,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "abstract",
@@ -998,19 +978,11 @@
           "named": true
         },
         {
-          "type": "expr",
-          "named": true
-        },
-        {
           "type": "forall",
           "named": true
         },
         {
           "type": "function_name",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -1608,8 +1580,8 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
-      "required": false,
+      "multiple": false,
+      "required": true,
       "types": [
         {
           "type": "type_signature",
@@ -1823,7 +1795,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -2064,15 +2036,7 @@
           "named": true
         },
         {
-          "type": "expr",
-          "named": true
-        },
-        {
           "type": "forall",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -2107,7 +2071,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "attribute",
@@ -2261,10 +2225,6 @@
           "named": true
         },
         {
-          "type": "id",
-          "named": true
-        },
-        {
           "type": "lambda",
           "named": true
         },
@@ -2304,14 +2264,22 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
+        {
+          "type": "attribute",
+          "named": true
+        },
         {
           "type": "expr",
           "named": true
         },
         {
           "type": "field_name",
+          "named": true
+        },
+        {
+          "type": "signature",
           "named": true
         }
       ]
@@ -2367,10 +2335,6 @@
         },
         {
           "type": "generalize",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -2500,15 +2464,7 @@
           "named": true
         },
         {
-          "type": "expr",
-          "named": true
-        },
-        {
           "type": "forall",
-          "named": true
-        },
-        {
-          "type": "id",
           "named": true
         },
         {
@@ -2742,7 +2698,8 @@
   },
   {
     "type": "comment",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "constructor",
@@ -2850,7 +2807,8 @@
   },
   {
     "type": "pragma",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "primitive",
@@ -2874,10 +2832,6 @@
   },
   {
     "type": "quoteContext",
-    "named": false
-  },
-  {
-    "type": "quoteGoal",
     "named": false
   },
   {
