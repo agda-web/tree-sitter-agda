@@ -11,7 +11,11 @@ enum TokenType {
     NEWLINE,
     INDENT,
     DEDENT,
-    SYM_DEDENT_IN,
+    // to recognize patterns "let ... (in ...)" and "with ... (in ...)"
+    LET_VOPEN,
+    LET_VCLOSE,
+    WITH_VOPEN,
+    WITH_VCLOSE,
 };
 
 typedef enum {
@@ -96,6 +100,17 @@ bool tree_sitter_agda_external_scanner_scan(void *payload, TSLexer *lexer,
         return false;
     }
 
+    if (valid_symbols[LET_VOPEN]) {
+        lexer->log(lexer, "!!! Emit LET_VOPEN");
+        lexer->result_symbol = LET_VOPEN;
+        return true;
+    }
+    if (valid_symbols[WITH_VOPEN]) {
+        lexer->log(lexer, "!!! Emit WITH_VOPEN");
+        lexer->result_symbol = WITH_VOPEN;
+        return true;
+    }
+
     while (true) {
         while (lexer->lookahead == ' ') skip(lexer);
 
@@ -125,9 +140,7 @@ bool tree_sitter_agda_external_scanner_scan(void *payload, TSLexer *lexer,
             continue;
 
         // special case lexing the token "in" and triggering a dedent;
-        // Agda seems to handle this via an error token, but I cannot replicate the exact behavior in tree-sitter
-        } else if (cur_lex_state(scanner) == LEX_STATE_NORMAL &&
-            lexer->lookahead == 'i') {
+        } else if (lst == LEX_STATE_NORMAL && lexer->lookahead == 'i') {
             advance(lexer);
             if (lexer->lookahead != 'n') {
                 return false;
@@ -136,13 +149,25 @@ bool tree_sitter_agda_external_scanner_scan(void *payload, TSLexer *lexer,
             if (!can_delimit_agda_id(lexer->lookahead)) {
                 return false;
             }
-            lexer->log(lexer, "!!! NORMAL & tokenized 'in': popBlock (dedent in, open layout=%d)", scanner->open_layout);
-            assert(scanner->open_layout.size > 0);
-            (void) array_pop(&scanner->open_layout);
-            lexer->result_symbol = SYM_DEDENT_IN;
-            return true;
+
+            if (valid_symbols[LET_VCLOSE]) {
+                // let ... in: "let" is also a layout keyword, so we need to close a block.
+                // Agda seems to handle this via an error token, but I cannot replicate the exact behavior in tree-sitter
+                lexer->log(lexer, "!!! NORMAL & tokenized 'in': close a \"let\" block (# open layout=%d)", scanner->open_layout.size);
+                assert(scanner->open_layout.size > 0);
+                (void) array_pop(&scanner->open_layout);
+                lexer->result_symbol = LET_VCLOSE;
+                return true;
+            } if (valid_symbols[WITH_VCLOSE]) {
+                // with ... in
+                lexer->log(lexer, "!!! NORMAL & tokenized 'in': close a \"with\"");
+                lexer->result_symbol = WITH_VCLOSE;
+                return true;
+            } else {
+                return false;
+            }
         } else if (lst == LEX_STATE_EMPTY_LAYOUT) {
-                lexer->log(lexer, "!!! EMPTY_LAYOUT");
+            lexer->log(lexer, "!!! EMPTY_LAYOUT");
             // --- emptyLayout
             (void) array_pop(&scanner->lex_state);
             array_push(&scanner->lex_state, LEX_STATE_BOL);

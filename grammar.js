@@ -27,7 +27,10 @@ module.exports = grammar({
     $._newline,
     $._indent,
     $._dedent,
-    $._dedent_in,
+    $._let_vopen,
+    $._let_vclose,
+    $._with_vopen,
+    $._with_vclose,
   ],
 
   rules: {
@@ -149,14 +152,12 @@ module.exports = grammar({
       seq(
         optional($.attributes),
         alias($.lhs_decl, $.lhs),
-        // XXX: missing WHS
         alias(optional($.rhs_decl), $.rhs),
         optional($.where),
       ),
       seq(
         optional($.attributes),
         alias($.lhs_defn, $.lhs),
-        // XXX: missing WHS
         alias(optional($.rhs_defn), $.rhs),
         optional($.where),
       ),
@@ -164,12 +165,12 @@ module.exports = grammar({
 
     // LHS
     lhs_decl: $ => seq(
-      alias($._with_exprs, $.function_name),
+      alias($._unnamed_with_exprs, $.function_name),
       optional($.rewrite_equations),
       optional($.with_expressions),
     ),
     lhs_defn: $ => prec(1, seq(
-      $._with_exprs,
+      $._unnamed_with_exprs,
       optional($.rewrite_equations),
       optional($.with_expressions),
     )),
@@ -178,11 +179,11 @@ module.exports = grammar({
     rhs_decl: $ => seq(':', $.expr),
     rhs_defn: $ => seq('=', $.expr),
 
-    // WithExpressions
-    with_expressions: $ => seq('with', $.expr),
+    // WHS/WithExpressions
+    with_expressions: $ => seq('with', $._with_vopen, alias($._with_exprs, $.expr)),
 
-    // RewriteEquations
-    rewrite_equations: $ => seq('rewrite', $._with_exprs),
+    // WHS/UnnamedWithExprs
+    rewrite_equations: $ => seq('rewrite', $._unnamed_with_exprs),
 
     // WhereClause
     where: $ => seq(
@@ -600,50 +601,57 @@ module.exports = grammar({
     expr: $ => choice(
       seq($._typed_bindings, $._ARROW, $.expr),
       seq(optional($.attributes), $._atoms, $._ARROW, $.expr),
-      seq($._with_exprs, '=', $.expr),
-      prec(-1, $._with_exprs), // lowest precedence
+      prec(-1, $._unnamed_with_exprs), // lowest precedence
     ),
     stmt: $ => choice(
       seq($._typed_bindings, $._ARROW, $.expr),
       seq(optional($.attributes), $._atoms, $._ARROW, $.expr),
-      seq($._with_exprs, '=', $.expr),
-      prec(-1, $._with_exprs), // lowest precedence
+      // seq($._unnamed_with_exprs, '=', $.expr),
+      prec(-1, $._unnamed_with_exprs), // lowest precedence
     ),
 
-    // WithExprs/Expr1
-    _with_exprs: $ => seq(
-      repeat(seq($._atoms, '|')),
+    // UnnamedWithExprs/Expr1
+    _unnamed_with_exprs: $ => choice(
+      seq($._atoms, '|', $._unnamed_with_exprs),
       $._application,
+    ),
+
+    // WithExprs
+    _with_exprs: $ => seq(
+      $._atoms,
+      optional(seq(alias($._with_vclose, 'in'), $.id)),
+      optional(seq('|', $._with_exprs)),
     ),
 
     // ExprOrAttr
     _expr_or_attr: $ => choice(
       $.literal,
       $._qid,
-      paren($.expr),
+      paren($._expr4),
+    ),
+
+    _expr4: $ => choice(
+      seq($._unnamed_with_exprs, '=', $.expr),
+      $.expr,
     ),
 
     // Application
-    _application: $ => seq(
-      optional($._atoms),
+    _application: $ => choice(
       $._expr2,
+      seq($.atom, $._application),
     ),
 
-    // Expr
-    _expr2_without_let: $ => choice(
+    // Expr2
+    _expr2: $ => choice(
       $.lambda,
       alias($.lambda_extended_or_absurd, $.lambda),
       $.forall,
+      $.let,
       $.do,
-      prec(-1, $.atom),
+      $.atom,
       // this is unused? can remove because 'in' interrupts 'instance'
       // seq('quoteGoal', $.id, 'in', $.expr),
       seq('tactic', $._atoms),
-      seq('tactic', $._atoms, '|', $._with_exprs),
-    ),
-    _expr2: $ => choice(
-      $._expr2_without_let,
-      $.let,
     ),
 
     // Expr3
@@ -651,10 +659,14 @@ module.exports = grammar({
       $._atom_curly,
       $._atom_no_curly,
     ),
-    // Application3 / OpenArgs
-    _atoms: $ => repeat1($.atom),
+    // Application3 / OpenArgs (=optional)
+    _atoms: $ => seq($.atom, optional($._atoms)),
 
-    _atom_curly: $ => brace(optional($.expr)),
+    // XXX: missing '{{' Expr4 '}}'
+    _atom_curly: $ => choice(
+      brace(optional($._expr4)),
+      brace_double(optional($._expr4)),
+    ),
 
     _atom_no_curly: $ => choice(
       '_',
@@ -665,13 +677,12 @@ module.exports = grammar({
       'quoteContext',
       'unquote',
       $.PropN,
-      brace_double($.expr),
-      idiom($.expr),
+      idiom(alias($._unnamed_with_exprs, $.expr)),
+      '(|)',
       seq('(', ')'),
-      seq('{{', '}}'),
-      seq('⦃', '⦄'),
       seq($.id, '@', $.atom),
       seq('.', $.atom),
+      seq('..', $.atom),
       $.record_assignments,
       alias($.field_assignments, $.record_assignments),
       $._ELLIPSIS,
@@ -684,6 +695,7 @@ module.exports = grammar({
     // LetBody
     let: $ => prec.right(1, seq(
       'let',
+      $._let_vopen,
       $._indent,
       $._declarations1,
       choice(
@@ -695,7 +707,7 @@ module.exports = grammar({
     _let_body: $ => seq(
       // dedent can still be triggered via layout
       optional($._dedent),
-      alias($._dedent_in, 'in'),
+      alias($._let_vclose, 'in'),
       $.expr,
     ),
 

@@ -138,11 +138,27 @@
           "named": true
         },
         {
+          "type": "do",
+          "named": true
+        },
+        {
           "type": "expr",
           "named": true
         },
         {
+          "type": "forall",
+          "named": true
+        },
+        {
           "type": "id",
+          "named": true
+        },
+        {
+          "type": "lambda",
+          "named": true
+        },
+        {
+          "type": "let",
           "named": true
         },
         {
@@ -165,11 +181,31 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
+          "type": "atom",
+          "named": true
+        },
+        {
+          "type": "do",
+          "named": true
+        },
+        {
           "type": "expr",
+          "named": true
+        },
+        {
+          "type": "forall",
+          "named": true
+        },
+        {
+          "type": "lambda",
+          "named": true
+        },
+        {
+          "type": "let",
           "named": true
         },
         {
@@ -426,6 +462,10 @@
           "named": true
         },
         {
+          "type": "id",
+          "named": true
+        },
+        {
           "type": "lambda",
           "named": true
         },
@@ -530,7 +570,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "atom",
@@ -825,7 +865,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "atom",
@@ -1745,6 +1785,10 @@
           "named": true
         },
         {
+          "type": "do",
+          "named": true
+        },
+        {
           "type": "expr",
           "named": true
         },
@@ -1753,7 +1797,19 @@
           "named": true
         },
         {
+          "type": "forall",
+          "named": true
+        },
+        {
           "type": "id",
+          "named": true
+        },
+        {
+          "type": "lambda",
+          "named": true
+        },
+        {
+          "type": "let",
           "named": true
         },
         {
@@ -1955,11 +2011,27 @@
           "named": true
         },
         {
+          "type": "do",
+          "named": true
+        },
+        {
           "type": "expr",
           "named": true
         },
         {
+          "type": "forall",
+          "named": true
+        },
+        {
           "type": "id",
+          "named": true
+        },
+        {
+          "type": "lambda",
+          "named": true
+        },
+        {
+          "type": "let",
           "named": true
         },
         {
@@ -2614,6 +2686,10 @@
   },
   {
     "type": "(|",
+    "named": false
+  },
+  {
+    "type": "(|)",
     "named": false
   },
   {
