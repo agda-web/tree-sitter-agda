@@ -772,7 +772,7 @@ module.exports = grammar({
 
     // DoStmt
     _do_stmt: $ => seq(
-      $.stmt,  // should be expr???
+      $.stmt, // should be expr???
       optional($.do_where),
     ),
 
@@ -897,7 +897,7 @@ module.exports = grammar({
           /[^-]/, // anything but -
           /-[^}]/, // - not followed by }
         )),
-        /-}\n*/,  // eat newlines to prevent spurious `_newline`s affecting external parser
+        /-}\n*/, // eat newlines to prevent spurious `_newline`s affecting external parser
       ),
     )),
 
@@ -949,21 +949,6 @@ function indent($, ...rule) {
     ...rule,
     $._dedent,
   );
-}
-
-// 1 or more $RULE ending with a NEWLINE
-/**
- * Creates a rule that uses an indentation block, where each line is a rule.
- * The indentation is required before and dedentation is required after.
- *
- * @param {GrammarSymbols<any>} $
- *
- * @param {RuleOrLiteral} rules
- *
- * @returns {SeqRule}
- */
-function block($, rules) {
-  return indent($, repeat1(seq(rules, $._newline)));
 }
 
 // //////////////////////////////////////////////////////////////////////
